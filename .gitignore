@@ -1,0 +1,10 @@
+*.userprefs
+*.sln
+
+Build/
+Library/
+Temp/
+
+ProjectSettings/ProjectVersion.txt
+
+Dissonance_Diagnostics
