@@ -14,10 +14,10 @@ MonoBehaviour:
   _quality: 0
   _frameSize: 2
   _denoiseAmount: 2
-  _aecAmount: -1
+  _aecAmount: 2
   _aecDelayAgnostic: 1
   _aecExtendedFilter: 1
   _aecRefinedAdaptiveFilter: 1
-  _aecmRoutingMode: -1
+  _aecmRoutingMode: 4
   _aecmComfortNoise: 1
   _voiceDuckLevel: 0.75

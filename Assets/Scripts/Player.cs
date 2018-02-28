@@ -9,6 +9,10 @@ public class Player : NetworkBehaviour {
 	public static int number { get { return (player != null) ? player._number : 1; } }
 	public static int maxPlayers = 2;
 	public static GameObject[] players = new GameObject[4];
+	public float rejectTime = 1f;
+
+	public AudioClip hintSound;
+	public AudioClip failSound;
 
 	static Player player;
 
@@ -59,37 +63,66 @@ public class Player : NetworkBehaviour {
 		Deck.DealCard (pileTag, slot);
 	}
 
-	[Server] void ServerDiscard(GameObject cardObject) {
+	[ClientRpc] void RpcDiscard(GameObject cardObject, bool playRejectSound) {
 		Card card = cardObject.GetComponent<Card> ();
-		StartCoroutine (DrawCard (card.pileTag, card.pileSlot));
 		card.pileTag = "Discard";
-		card.pileSlot = DiscardPile.top;
+		card.pileSlot = 0;
+		card.localPileTag = "Discard";
+		int top = GameObject.FindGameObjectWithTag ("Discard").GetComponent<CardPile> ().Count;
+		card.localPileSlot = top;
+		if (playRejectSound) {
+			AudioSource.PlayClipAtPoint (failSound, Vector3.zero, 0.667f);
+		}
 	}
 
 	[Command] void CmdDiscard(GameObject cardObject) {
+		if (Deck.gameOver || (Deck.turn % Deck.numPlayers) + 1 != assignedNumber) {
+			// cheater! it isn't your turn
+			return;
+		}
+
 		Deck.UpdateTurn (true);
-		ServerDiscard (cardObject);
+		Card card = cardObject.GetComponent<Card> ();
+		Deck.cardsInPlay [card.colorIndex - 1, card.number - 1]--;
+		RpcDiscard (cardObject, false);
+		StartCoroutine (DrawCard (card.pileTag, card.pileSlot));
 		Hints.remaining++;
+		Deck.CheckGameOver (false, card.colorIndex);
 	}
 
 	public static void Discard(GameObject cardObject) {
 		player.CmdDiscard (cardObject);
 	}
 
+	IEnumerator RejectCard(GameObject cardObject) {
+		yield return new WaitForSeconds (rejectTime);
+		RpcDiscard (cardObject, true);
+	}
+
 	[Command] void CmdPlay(GameObject cardObject) {
+		if (Deck.gameOver || (Deck.turn % Deck.numPlayers) + 1 != assignedNumber) {
+			// cheater! it isn't your turn
+			return;
+		}
+
 		Deck.UpdateTurn (true);
 		Card card = cardObject.GetComponent<Card> ();
+		Deck.cardsInPlay [card.colorIndex - 1, card.number - 1]--;
 		CardPile playPile = (GameObject.FindGameObjectWithTag ("Column" + card.colorIndex)).GetComponent<CardPile> ();
+		StartCoroutine (DrawCard (card.pileTag, card.pileSlot));
 		if (playPile.Count + 1 == card.number) {
-			StartCoroutine (DrawCard (card.pileTag, card.pileSlot));
 			card.pileTag = "Column" + card.colorIndex;
 			card.pileSlot = card.number - 1;
 			if (card.number == 5) {
 				Hints.remaining++;
 			}
+			Deck.CheckGameOver (true, card.colorIndex);
 		} else {
-			ServerDiscard (cardObject);
+			card.pileTag = "RejectedPile";
+			card.pileSlot = 0;
 			Bomb.fuse--;
+			StartCoroutine (RejectCard (cardObject));
+			Deck.CheckGameOver (false, card.colorIndex);
 		}
 	}
 
@@ -97,21 +130,48 @@ public class Player : NetworkBehaviour {
 		player.CmdPlay (cardObject);
 	}
 
-	[ClientRpc] void RpcRevealColor(GameObject cardObject) {
-		cardObject.GetComponent<Card> ().colorKnown = true;
+	[ClientRpc] void RpcRevealColor(GameObject cardObject, int color) {
+		Transform hand = cardObject.transform.parent.parent;
+		for (int i = 0; i < hand.childCount; i++) {
+			Transform sibling = hand.GetChild (i);
+			Card siblingCard = sibling.GetComponentInChildren<Card> ();
+			if (siblingCard.colorIndex == color) {
+				siblingCard.RevealColor ();
+			}
+		}
+		AudioSource.PlayClipAtPoint (hintSound, Vector3.zero, 0.667f);
 	}
 
 	[Command] void CmdRevealColor(GameObject cardObject) {
-		Deck.UpdateTurn (false);
+		if (Deck.gameOver || (Deck.turn % Deck.numPlayers) + 1 != assignedNumber) {
+			// cheater! it isn't your turn
+			return;
+		}
+
+		if (Hints.remaining <= 0) {
+			// cheater! there are no hints left
+			return;
+		}
+
+		bool success = false;
 		Card card = cardObject.GetComponent<Card> ();
-		Hints.remaining--;
 		Transform hand = card.transform.parent.parent;
 		for (int i = 0; i < hand.childCount; i++) {
 			Transform sibling = hand.GetChild (i);
 			Card siblingCard = sibling.GetComponentInChildren<Card> ();
 			if (siblingCard.colorIndex == card.colorIndex) {
-				RpcRevealColor (siblingCard.gameObject);
+				if (!siblingCard.colorKnown) {
+					success = true;
+				}
+				siblingCard.colorKnown = true;
 			}
+		}
+
+		// prevent useless hints
+		if (success) {
+			Deck.UpdateTurn (false);
+			Hints.remaining--;
+			RpcRevealColor (cardObject, card.colorIndex);
 		}
 	}
 
@@ -119,38 +179,52 @@ public class Player : NetworkBehaviour {
 		player.CmdRevealColor (cardObject);
 	}
 
-	[ClientRpc] void RpcRevealNumber(GameObject cardObject) {
-		cardObject.GetComponent<Card> ().numberKnown = true;
+	[ClientRpc] void RpcRevealNumber(GameObject cardObject, int cardNumber) {
+		Transform hand = cardObject.transform.parent.parent;
+		for (int i = 0; i < hand.childCount; i++) {
+			Transform sibling = hand.GetChild (i);
+			Card siblingCard = sibling.GetComponentInChildren<Card> ();
+			if (siblingCard.number == cardNumber) {
+				siblingCard.RevealNumber ();
+			}
+		}
+		AudioSource.PlayClipAtPoint (hintSound, Vector3.zero, 0.667f);
 	}
 
 	[Command] void CmdRevealNumber(GameObject cardObject) {
-		Deck.UpdateTurn (false);
+		if (Deck.gameOver || (Deck.turn % Deck.numPlayers) + 1 != assignedNumber) {
+			// cheater! it isn't your turn
+			return;
+		}
+
+		if (Hints.remaining <= 0) {
+			// cheater! there are no hints left
+			return;
+		}
+
+		bool success = false;
 		Card card = cardObject.GetComponent<Card> ();
-		Hints.remaining--;
 		Transform hand = card.transform.parent.parent;
 		for (int i = 0; i < hand.childCount; i++) {
 			Transform sibling = hand.GetChild (i);
 			Card siblingCard = sibling.GetComponentInChildren<Card> ();
 			if (siblingCard.number == card.number) {
-				RpcRevealNumber (siblingCard.gameObject);
+				if (!siblingCard.numberKnown) {
+					success = true;
+				}
+				siblingCard.numberKnown = true;
 			}
+		}
+
+		if (success) {
+			Deck.UpdateTurn (false);
+			Hints.remaining--;
+			RpcRevealNumber (cardObject, card.number);
 		}
 	}
 
 	public static void RevealNumber(GameObject cardObject) {
 		player.CmdRevealNumber (cardObject);
-	}
-
-	[ClientRpc] void RpcCycleDiscardPile() {
-		DiscardPile.Cycle ();
-	}
-
-	[Command] void CmdCycleDiscardPile() {
-		RpcCycleDiscardPile ();
-	}
-
-	public static void CycleDiscardPile() {
-		player.CmdCycleDiscardPile ();
 	}
 
 	[Command] void CmdNewGame() {

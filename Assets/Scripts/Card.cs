@@ -5,23 +5,28 @@ using UnityEngine.UI;
 using UnityEngine.Networking;
 
 public class Card : NetworkBehaviour {
-	[SyncVar] public int number;
-	[SyncVar] public int colorIndex;
 	public Color[] colors;
 	public Text numberText;
 	public MeshRenderer colorMeshRenderer;
 	public float revealSpeed = 4f;
-	[SyncVar] public string pileTag;
-	[SyncVar] public int pileSlot;
 	public float liftHeight = 1.5f;
 	public AudioClip[] moveSounds;
+	public ParticleSystem revealColorEffect;
+	public Animator revealNumberAnimator;
+	public Text revealNumberText;
+
+	[SyncVar] public int number;
+	[SyncVar] public int colorIndex;
+	[SyncVar] public string pileTag;
+	[SyncVar] public int pileSlot;
+	[SyncVar] public bool numberKnown;
+	[SyncVar] public bool colorKnown;
+	public string localPileTag;
+	public int localPileSlot;
 
 	public static bool showAllyCards = true;
 
 	public Vector3 liftOffset { get; set; }
-
-	public bool numberKnown { get; set; }
-	public bool colorKnown { get; set; }
 
 	Animator animator;
 
@@ -43,9 +48,9 @@ public class Card : NetworkBehaviour {
 		bool showColor = false;
 
 		if (pileTag == "Deck") {
-			numberKnown = false;
-			colorKnown = false;
-		} else if (pileTag == "Discard" || pileTag.StartsWith ("Column")) {
+			showNumber = false;
+			showColor = false;
+		} else if (pileTag == "Discard" || pileTag.StartsWith ("Column") || pileTag == "RejectedPile" || pileTag == "SortPile") {
 			showNumber = true;
 			showColor = true;
 		} else if (pileTag == "Hand" + Player.number) {
@@ -72,10 +77,12 @@ public class Card : NetworkBehaviour {
 		outline.effectColor = Color.Lerp (outline.effectColor, outlineColor, revealSpeed * Time.deltaTime);
 
 		// move to assigned pile
-		GameObject pile = GameObject.FindGameObjectWithTag(pileTag);
-		Transform slot = pile.transform.GetChild (pileSlot);
+		string activePileTag = (pileTag == "Discard") ? localPileTag : pileTag;
+		int activePileSlot = (pileTag == "Discard") ? localPileSlot : pileSlot;
+		GameObject pile = GameObject.FindGameObjectWithTag(activePileTag);
+		Transform slot = pile.transform.GetChild (activePileSlot);
 		if (transform.parent != slot) {
-			if (transform.parent.parent.tag != "Discard" && pileTag != "Deck") {
+			if (activePileTag != "Deck") {
 				AudioSource.PlayClipAtPoint (moveSounds [Random.Range (0, moveSounds.Length)], Vector3.zero, 1);
 			}
 			liftOffset = new Vector3(liftOffset.x, liftOffset.y, -liftHeight);
@@ -86,5 +93,22 @@ public class Card : NetworkBehaviour {
 
 		// reduce lift height
 		liftOffset = Vector3.Lerp(liftOffset, Vector3.zero, revealSpeed * revealSpeed * Time.deltaTime);
+
+		// expand discard pile if joining mid game
+		if (pileTag == "Discard" && pileSlot == 0 && transform.GetSiblingIndex() > 0) {
+			localPileTag = "Discard";
+			localPileSlot = transform.GetSiblingIndex ();
+		}
+	}
+
+	public void RevealColor() {
+		ParticleSystem.MainModule main = revealColorEffect.main;
+		main.startColor = colors [colorIndex];
+		revealColorEffect.Play ();
+	}
+
+	public void RevealNumber() {
+		revealNumberText.text = number.ToString ();
+		revealNumberAnimator.SetTrigger ("play");
 	}
 }

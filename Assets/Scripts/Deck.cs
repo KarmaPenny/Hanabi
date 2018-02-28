@@ -9,87 +9,65 @@ public class Deck : CardPile {
 	public AudioClip[] shuffleSounds;
 
 	static Deck singleton;
+	static bool dealing = false;
+
+	public static int[,] cardsInPlay = new int[5,5];
+	static void ResetCardsInPlay() {
+		for (int color = 0; color < 5; color++) {
+			for (int number = 0; number < 5; number++) {
+				int count = (number == 0) ? 3 : (number == 4) ? 1 : 2;
+				cardsInPlay [color, number] = count;
+			}
+		}
+	}
 
 	[SyncVar] int _numPlayers = 2;
 	public static int numPlayers { get { return (singleton != null) ? singleton._numPlayers : 2; } }
 
 	bool selected;
-	List<Card> spawnedCards = new List<Card>();
 
 	[SyncVar] int _turn = -1;
 	[SyncVar] int endTurn = -2;
+	public static int lastTurn { get { return (singleton != null) ? singleton.endTurn - 1 : -2; } }
 	public static bool isEmpty { get { return (singleton != null) ? singleton._turn == singleton.endTurn : false; } }
-	public static int turn {
-		get {
-			// end game if bomb fuse is gone
-			if (singleton == null || Bomb.fuse == 0) {
-				return -1;
-			}
-
-			// end game if all 25 points scored
-			int score = 0;
-			for (int i = 1; i <= 5; i++) {
-				GameObject playPileObject = GameObject.FindGameObjectWithTag ("Column" + i);
-				if (playPileObject != null) {
-					CardPile playPile = playPileObject.GetComponent<CardPile> ();
-					score += playPile.Count;
-				}
-			}
-			if (score >= 25) {
-				return -1;
-			}
-
-			// end game if deck is empty
-			if (singleton._turn == singleton.endTurn) {
-				return -1;
-			}
-
-			return singleton._turn;
+	[SyncVar] bool _gameOver;
+	public static bool gameOver { get { return (singleton == null) ? false : singleton._gameOver; } }
+	public static void CheckGameOver(bool played, int color) {
+		if (Bomb.fuse == 0 || singleton._turn == singleton.endTurn) {
+			singleton._gameOver = true;
+			return;
 		}
+
+		// end game if play piles are completed
+		for (int i = 1; i <= 5; i++) {
+			GameObject playPileObject = GameObject.FindGameObjectWithTag ("Column" + i);
+			CardPile playPile = playPileObject.GetComponent<CardPile> ();
+			int playPileCount = playPile.Count;
+			if (played && color == i) {
+				playPileCount++;
+			}
+			if (playPileCount < 5 && cardsInPlay [i - 1, playPileCount] > 0) {
+				singleton._gameOver = false;
+				return;
+			}
+		}
+
+		// nothing left to play
+		singleton._gameOver = true;
 	}
+	public static int turn { get { return (singleton != null) ? singleton._turn : -1; } }
+	public static int remaining { get { return (singleton != null) ? singleton.Count : 50; } } 
 
 	protected override void Start () {
 		base.Start ();
-
 		singleton = this;
+	}
 
+	void Update() {
 		if (hasAuthority) {
-			// get a list of available deck slots
-			List<int> deckSlots = new List<int> ();
-			for (int i = 0; i < transform.childCount; i++) {
-				deckSlots.Add (i);
+			if (GameObject.FindGameObjectsWithTag("Card").Length == 0) {
+				SpawnCards ();
 			}
-
-			// place cards in the deck
-			for (int color = 1; color < 6; color++) {
-				// place the 5s
-				int slot = Random.Range (0, deckSlots.Count);
-				SpawnCard (color, 5, deckSlots [slot]);
-				deckSlots.RemoveAt (slot);
-
-				// place the 1s
-				for (int i = 0; i < 3; i++) {
-					slot = Random.Range (0, deckSlots.Count);
-					SpawnCard (color, 1, deckSlots [slot]);
-					deckSlots.RemoveAt (slot);
-				}
-
-				// place teh 2s, 3s and 4s
-				for (int i = 0; i < 2; i++) {
-					slot = Random.Range (0, deckSlots.Count);
-					SpawnCard (color, 2, deckSlots [slot]);
-					deckSlots.RemoveAt (slot);
-					slot = Random.Range (0, deckSlots.Count);
-					SpawnCard (color, 3, deckSlots [slot]);
-					deckSlots.RemoveAt (slot);
-					slot = Random.Range (0, deckSlots.Count);
-					SpawnCard (color, 4, deckSlots [slot]);
-					deckSlots.RemoveAt (slot);
-				}
-			}
-
-			// Deal
-			DealCards();
 		}
 	}
 
@@ -98,29 +76,38 @@ public class Deck : CardPile {
 	}
 
 	public static void NewGame() {
-		Hints.remaining = 8;
-		Bomb.fuse = 3;
-		singleton._turn = -1;
-		singleton.endTurn = -2;
+		if (!dealing) {
+			dealing = true;
+			Hints.remaining = 8;
+			Bomb.fuse = 3;
+			singleton._turn = -1;
+			singleton.endTurn = -2;
+			ResetCardsInPlay ();
+			singleton._gameOver = false;
+			FireworksShow.totalScore = 0;
 
-		// get a list of available deck slots
-		List<int> deckSlots = new List<int> ();
-		for (int i = 0; i < singleton.transform.childCount; i++) {
-			deckSlots.Add (i);
+			// get a list of available deck slots
+			List<int> deckSlots = new List<int> ();
+			for (int i = 0; i < singleton.transform.childCount; i++) {
+				deckSlots.Add (i);
+			}
+
+			// place cards in the deck
+			foreach (GameObject cardObject in GameObject.FindGameObjectsWithTag("Card")) {
+				Card card = cardObject.GetComponent<Card> ();
+				int slot = Random.Range (0, deckSlots.Count);
+				card.pileTag = "Deck";
+				card.pileSlot = deckSlots [slot];
+				card.numberKnown = false;
+				card.colorKnown = false;
+				deckSlots.RemoveAt (slot);
+			}
+
+			// Deal
+			singleton.DealCards ();
+
+			singleton.RpcNewGame ();
 		}
-
-		// place cards in the deck
-		foreach (Card card in singleton.spawnedCards) {
-			int slot = Random.Range (0, deckSlots.Count);
-			card.pileTag = "Deck";
-			card.pileSlot = deckSlots [slot];
-			deckSlots.RemoveAt (slot);
-		}
-
-		// Deal
-		singleton.DealCards();
-
-		singleton.RpcNewGame ();
 	}
 
 	public static void UpdateTurn(bool drawing) {
@@ -131,10 +118,50 @@ public class Deck : CardPile {
 		singleton._turn++;
 	}
 
+	void SpawnCards() {
+		// get a list of available deck slots
+		List<int> deckSlots = new List<int> ();
+		for (int i = 0; i < transform.childCount; i++) {
+			deckSlots.Add (i);
+		}
+
+		// place cards in the deck
+		for (int color = 1; color < 6; color++) {
+			// place the 5s
+			int slot = Random.Range (0, deckSlots.Count);
+			SpawnCard (color, 5, deckSlots [slot]);
+			deckSlots.RemoveAt (slot);
+
+			// place the 1s
+			for (int i = 0; i < 3; i++) {
+				slot = Random.Range (0, deckSlots.Count);
+				SpawnCard (color, 1, deckSlots [slot]);
+				deckSlots.RemoveAt (slot);
+			}
+
+			// place the 2s, 3s and 4s
+			for (int i = 0; i < 2; i++) {
+				slot = Random.Range (0, deckSlots.Count);
+				SpawnCard (color, 2, deckSlots [slot]);
+				deckSlots.RemoveAt (slot);
+				slot = Random.Range (0, deckSlots.Count);
+				SpawnCard (color, 3, deckSlots [slot]);
+				deckSlots.RemoveAt (slot);
+				slot = Random.Range (0, deckSlots.Count);
+				SpawnCard (color, 4, deckSlots [slot]);
+				deckSlots.RemoveAt (slot);
+			}
+		}
+
+		ResetCardsInPlay ();
+
+		// Deal
+		DealCards();
+	}
+
 	void SpawnCard(int color, int number, int slot) {
 		Transform cardTransform = Instantiate (cardPrefab, transform.position, transform.rotation);
 		Card card = cardTransform.GetComponent<Card> ();
-		spawnedCards.Add (card);
 		card.colorIndex = color;
 		card.number = number;
 		card.pileTag = "Deck";
@@ -167,6 +194,7 @@ public class Deck : CardPile {
 		// set the number of players at the time of the deal
 		_numPlayers = NetworkManager.singleton.numPlayers;
 
+
 		// mix up player order
 		Player.ReassignPlayerNumbers ();
 
@@ -180,5 +208,7 @@ public class Deck : CardPile {
 
 		// start the game
 		_turn = 0;
+
+		dealing = false;
 	}
 }

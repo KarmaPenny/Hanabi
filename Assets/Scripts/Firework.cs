@@ -6,6 +6,7 @@ public class Firework : MonoBehaviour {
 	public Color color;
 	public Transform explosionPrefab;
 	public AudioClip[] explosionSounds;
+	public AudioClip[] launchSounds;
 	public float fuse;
 
 	public float minSpeed;
@@ -19,6 +20,12 @@ public class Firework : MonoBehaviour {
 		float speed = Random.Range (minSpeed, maxSpeed);
 		Vector3 dir = (new Vector3 (Random.Range (-0.5f, 0.5f), 1, 0)).normalized;
 		GetComponent<Rigidbody> ().velocity = speed * dir;
+		StartCoroutine (PlayLaunchSound ());
+	}
+
+	IEnumerator PlayLaunchSound() {
+		yield return new WaitForSeconds (fuse / 4);
+		AudioSource.PlayClipAtPoint (launchSounds [Random.Range (0, launchSounds.Length)], Vector3.zero, 0.05f);
 	}
 
 	void Update () {
@@ -42,7 +49,7 @@ public class Firework : MonoBehaviour {
 			AudioSource.PlayClipAtPoint(explosionSounds[Random.Range(0, explosionSounds.Length)], Vector3.zero, 1);
 
 			// add to score
-			FireworksDisplay.totalScore++;
+			FireworksShow.totalScore++;
 
 			Destroy (gameObject, 10);
 		}

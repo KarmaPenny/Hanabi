@@ -77,6 +77,12 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 45959ad097463457c832b9dc6ccd1672, type: 3}
   - {fileID: 8300000, guid: 2920056bae126419382119a757995042, type: 3}
   - {fileID: 8300000, guid: 511e73e6bbb6c4a4ea152230dab7e738, type: 3}
+  launchSounds:
+  - {fileID: 8300000, guid: 0a41a7975a3e24516a644e140902d3aa, type: 3}
+  - {fileID: 8300000, guid: e693010630c8f4cba98b5a7dbebeadb4, type: 3}
+  - {fileID: 8300000, guid: dcbc8721eb20445ec9bc1d93ebec014e, type: 3}
+  - {fileID: 8300000, guid: e142cd8c04cf242fc820b9268cad01db, type: 3}
+  - {fileID: 8300000, guid: 45d21f2f09013497899719386b27f5e2, type: 3}
   fuse: 1.5
   minSpeed: 4.5
   maxSpeed: 12

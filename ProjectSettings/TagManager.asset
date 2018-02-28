@@ -15,6 +15,9 @@ TagManager:
   - Column5
   - Hand3
   - Hand4
+  - SortPile
+  - RejectedPile
+  - Card
   layers:
   - Default
   - TransparentFX

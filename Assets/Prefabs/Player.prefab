@@ -52,6 +52,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4dc17fbb9820a43fe91143e752aba052, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  rejectTime: 1.5
+  hintSound: {fileID: 8300000, guid: a703c9c9a22b74f7793c58223703205b, type: 3}
+  failSound: {fileID: 8300000, guid: 60002011f01654284b81b3eca7e9f628, type: 3}
+  userName: player
 --- !u!114 &114479355931490978
 MonoBehaviour:
   m_ObjectHideFlags: 1

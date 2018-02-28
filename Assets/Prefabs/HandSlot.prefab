@@ -21,6 +21,7 @@ GameObject:
   - component: {fileID: 4493164488138062}
   - component: {fileID: 65191335355967272}
   - component: {fileID: 114731242121949226}
+  - component: {fileID: 114787421587805138}
   m_Layer: 5
   m_Name: HandSlot
   m_TagString: Untagged
@@ -71,3 +72,14 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 5b43f591534174a82b283eb376863c33, type: 3}
   - {fileID: 8300000, guid: edd0764ed21eb4e829b4b00e0fc27775, type: 3}
   - {fileID: 8300000, guid: eba9f41bb4a83492196e813a834e1f2d, type: 3}
+--- !u!114 &114787421587805138
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1606263780359318}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d06b4d0d6a754df5bf392beab843d99, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

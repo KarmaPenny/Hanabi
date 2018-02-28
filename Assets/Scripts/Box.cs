@@ -5,14 +5,19 @@ using UnityEngine;
 public class Box : MonoBehaviour {
 	bool selected;
 
+	TouchInput touchInput;
+
+	void Start() {
+		touchInput = GetComponent<TouchInput> ();
+	}
+
 	void Update() {
-		if (selected) {
-			if (Input.GetButtonDown ("Fire1")) {
-				Player.NewGame ();
-			}
+		if ((selected && Input.GetButtonDown ("Fire1")) || touchInput.wasPressed || touchInput.wasLongPressed) {
+			MainMenu.opened = !MainMenu.opened;
 		}
 	}
 
+	#if UNITY_STANDALONE
 	void OnMouseEnter() {
 		selected = true;
 	}
@@ -20,4 +25,5 @@ public class Box : MonoBehaviour {
 	void OnMouseExit() {
 		selected = false;
 	}
+	#endif
 }
