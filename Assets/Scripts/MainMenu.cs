@@ -33,9 +33,7 @@ public class MainMenu : MonoBehaviour {
 		inGameMenu.SetActive (networkIsActive);
 
 		if (!networkIsActive) {
-			// always open when not connected
 			opened = !connecting;
-
 			if (manager.matchMaker != null) {
 				// refresh matches periodically
 				if (Time.time > nextRefresh) {

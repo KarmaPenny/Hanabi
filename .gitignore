@@ -8,3 +8,6 @@ Temp/
 ProjectSettings/ProjectVersion.txt
 
 Dissonance_Diagnostics
+obj/
+Logs/
+.vscode/

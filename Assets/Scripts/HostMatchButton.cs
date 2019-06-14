@@ -12,13 +12,14 @@ public class HostMatchButton : MonoBehaviour {
 	}
 
 	public void OnMatchCreate(bool success, string info, MatchInfo matchInfo) {
-		manager.OnMatchCreate (success, info, matchInfo);
 		MainMenu.connecting = false;
+		manager.OnMatchCreate (success, info, matchInfo);
 	}
 
 	public void CreateMatch() {
+		MainMenu.connecting = true;
 		string matchName = "Default";
 		matchName = System.Environment.UserName;
-		manager.matchMaker.CreateMatch (matchName, manager.matchSize, true, "", "", "", 0, 0, manager.OnMatchCreate);
+		manager.matchMaker.CreateMatch (matchName, manager.matchSize, true, "", "", "", 0, 0, OnMatchCreate);
 	}
 }

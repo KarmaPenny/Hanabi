@@ -4,9 +4,9 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 public class Player : NetworkBehaviour {
-	[SyncVar] int _number = 1;
+	[SyncVar] int _number = 0;
 	public int assignedNumber { get { return _number; } }
-	public static int number { get { return (player != null) ? player._number : 1; } }
+	public static int number { get { return (player != null) ? player._number : 0; } }
 	public static int maxPlayers = 2;
 	public static GameObject[] players = new GameObject[4];
 	public float rejectTime = 1f;
@@ -40,36 +40,36 @@ public class Player : NetworkBehaviour {
 		}
 	}
 
-	public static void ReassignPlayerNumbers() {
-		players = new GameObject[4];
-
-		GameObject[] playerObjects = GameObject.FindGameObjectsWithTag ("Player");
+	[Server] public static void ReassignPlayerNumbers() {
 		List<GameObject> tmp = new List<GameObject> ();
-		foreach (GameObject playerObject in playerObjects) {
-			tmp.Add (playerObject);
+		foreach (GameObject player in players) {
+			if (player != null) {
+				tmp.Add(player);
+			}
 		}
 
-		for (int i = 0; i < Deck.numPlayers; i++) {
+		players = new GameObject[4];
+		for (int i = 0; tmp.Count > 0; i++) {
 			int index = Random.Range (0, tmp.Count);
-			GameObject playerObject = tmp [index];
-			players [i] = playerObject;
-			playerObject.GetComponent<Player> ()._number = i + 1;
+			GameObject player = tmp [index];
+			players [i] = player;
+			player.GetComponent<Player> ()._number = i + 1;
 			tmp.RemoveAt (index);
 		}
 	}
 
 	IEnumerator DrawCard(string pileTag, int slot) {
 		yield return new WaitForSeconds (0.5f);
-		Deck.DealCard (pileTag, slot);
+		Hand hand = GameObject.FindGameObjectWithTag(pileTag).GetComponent<Hand>();
+		hand.Align();
+		Deck.DealCard (pileTag, 0);
+		hand.Align();
 	}
 
 	[ClientRpc] void RpcDiscard(GameObject cardObject, bool playRejectSound) {
 		Card card = cardObject.GetComponent<Card> ();
-		card.pileTag = "Discard";
-		card.pileSlot = 0;
 		card.localPileTag = "Discard";
-		int top = GameObject.FindGameObjectWithTag ("Discard").GetComponent<CardPile> ().Count;
-		card.localPileSlot = top;
+		card.localPileSlot = GameObject.FindGameObjectWithTag ("Discard").GetComponent<CardPile> ().Count;
 		if (playRejectSound) {
 			AudioSource.PlayClipAtPoint (failSound, Vector3.zero, 0.667f);
 		}
@@ -84,8 +84,17 @@ public class Player : NetworkBehaviour {
 		Deck.UpdateTurn (true);
 		Card card = cardObject.GetComponent<Card> ();
 		Deck.cardsInPlay [card.colorIndex - 1, card.number - 1]--;
-		RpcDiscard (cardObject, false);
 		StartCoroutine (DrawCard (card.pileTag, card.pileSlot));
+		card.pileTag = "Discard";
+		GameObject[] cards = GameObject.FindGameObjectsWithTag("Card");
+		int discarded = 0;
+		foreach (GameObject c in cards) {
+			if (c.GetComponent<Card>().pileTag == "Discared") {
+				discarded++;
+			}
+		}
+		card.pileSlot = discarded;
+		RpcDiscard (cardObject, false);
 		Hints.remaining++;
 		Deck.CheckGameOver (false, card.colorIndex);
 	}
@@ -96,6 +105,16 @@ public class Player : NetworkBehaviour {
 
 	IEnumerator RejectCard(GameObject cardObject) {
 		yield return new WaitForSeconds (rejectTime);
+		Card card = cardObject.GetComponent<Card> ();
+		card.pileTag = "Discard";
+		GameObject[] cards = GameObject.FindGameObjectsWithTag("Card");
+		int discarded = 0;
+		foreach (GameObject c in cards) {
+			if (c.GetComponent<Card>().pileTag == "Discared") {
+				discarded++;
+			}
+		}
+		card.pileSlot = discarded;
 		RpcDiscard (cardObject, true);
 	}
 

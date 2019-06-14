@@ -75,7 +75,7 @@ public class Deck : CardPile {
 		AudioSource.PlayClipAtPoint (shuffleSounds [Random.Range (0, shuffleSounds.Length)], Vector3.zero, 1);
 	}
 
-	public static void NewGame() {
+	[Server] public static void NewGame() {
 		if (!dealing) {
 			dealing = true;
 			Hints.remaining = 8;
@@ -118,7 +118,7 @@ public class Deck : CardPile {
 		singleton._turn++;
 	}
 
-	void SpawnCards() {
+	[Server] void SpawnCards() {
 		// get a list of available deck slots
 		List<int> deckSlots = new List<int> ();
 		for (int i = 0; i < transform.childCount; i++) {
@@ -178,7 +178,7 @@ public class Deck : CardPile {
 		}
 	}
 
-	public void DealCards() {
+	[Server] public void DealCards() {
 		StartCoroutine (Deal ());
 	}
 
@@ -188,15 +188,14 @@ public class Deck : CardPile {
 			yield return null;
 		}
 
-		// wait a bit so newly joined players see the deal
-		yield return new WaitForSeconds (1.5f);
-
 		// set the number of players at the time of the deal
 		_numPlayers = NetworkManager.singleton.numPlayers;
 
-
 		// mix up player order
 		Player.ReassignPlayerNumbers ();
+
+		// wait a bit so newly joined players see the deal
+		yield return new WaitForSeconds (1.5f);
 
 		// deal the cards out
 		for (int p = 1; p <= _numPlayers; p++) {

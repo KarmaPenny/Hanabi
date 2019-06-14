@@ -56,7 +56,7 @@ public class Card : NetworkBehaviour {
 		} else if (pileTag == "Hand" + Player.number) {
 			showNumber = numberKnown;
 			showColor = colorKnown;
-		} else {
+		} else if (Player.number > 0) {
 			showNumber = showAllyCards || numberKnown;
 			showColor = showAllyCards || colorKnown;
 		}

@@ -40,8 +40,8 @@ public class JoinMatchButton : MonoBehaviour {
 	}
 
 	public void OnMatchJoined(bool success, string info, MatchInfo matchInfo) {
-		manager.OnMatchJoined (success, info, matchInfo);
 		MainMenu.connecting = false;
+		manager.OnMatchJoined (success, info, matchInfo);
 	}
 
 	public void JoinMatch() {
