@@ -25,7 +25,7 @@ public class Firework : MonoBehaviour {
 
 	IEnumerator PlayLaunchSound() {
 		yield return new WaitForSeconds (fuse / 4);
-		AudioSource.PlayClipAtPoint (launchSounds [Random.Range (0, launchSounds.Length)], Vector3.zero, 0.05f);
+		AudioSource.PlayClipAtPoint (launchSounds [Random.Range (0, launchSounds.Length)], Vector3.zero, 0.1f);
 	}
 
 	void Update () {

@@ -4796,6 +4796,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: dcbc8721eb20445ec9bc1d93ebec014e, type: 3}
   - {fileID: 8300000, guid: e142cd8c04cf242fc820b9268cad01db, type: 3}
   - {fileID: 8300000, guid: 45d21f2f09013497899719386b27f5e2, type: 3}
+  - {fileID: 8300000, guid: b6aeeb761aeba47b19253b53cfbfaeda, type: 3}
   fuse: 1.5
   minSpeed: 4.5
   maxSpeed: 12
